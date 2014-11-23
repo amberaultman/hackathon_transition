@@ -3,7 +3,6 @@ import psycopg2
 from Config import Config
 import re
 from psycopg2.extensions import adapt, register_adapter, AsIs
-from bson.objectid import ObjectId
 from os import path
 import datetime
 import logging
