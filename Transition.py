@@ -15,7 +15,6 @@ def default():
 @app.route("/twilio_sms", methods=['GET', 'POST'])
 def twilio_sms():
 
-    tr_user_nk = -1
     message = request.values
     response = None
     success = False
@@ -35,8 +34,6 @@ def twilio_sms():
 
         user_number = request.values["From"]
         user_dict = user_model.retrieve_user(user_number)
-        if user_dict:
-            tr_user_nk = user_dict["tr_user_nk"]
 
         status = user_dict["status"] if user_dict else None
 
@@ -45,13 +42,22 @@ def twilio_sms():
             user_model.stop_number(user_number)
             response = Messages.STOP
 
+        elif body and body.lower().startswith("leave"):
+            dt = parse_time(body)
+            if dt:
+                response = Messages.HOME_CHANGED
+                user_dict["leave_time"] = dt
+                user_model.update_user(user_dict)
+            else:
+                response = Messages.BAD_TIME
+
         elif not status or status == Statuses.STOP:
             user_dict = user_model.create_user()
             if body and re.match("register", body, flags=re.IGNORECASE):
                 response = Messages.REGISTER
                 user_dict["user_number"] = user_number
                 user_dict["status"] = Statuses.REGISTER
-                tr_user_nk = user_model.insert_user(user_dict)
+                user_model.insert_user(user_dict)
             else:
                 loved_users = user_model.user_numbers_for_loved_one(user_number)
                 if not loved_users or len(loved_users) == 0:
@@ -173,9 +179,13 @@ def twilio_sms():
         else:
             response = "Sorry, something went wrong"
 
+        real_user_dict = {}
+        if user_dict:
+            real_user_dict.update(user_dict)
+            real_user_dict["leave_time"] = real_user_dict.get("leave_time").strftime("%I:%M %p") if real_user_dict.get("leave_time") else None
 
         resp = twilio.twiml.Response()
-        resp.message(response % user_dict if user_dict else response)
+        resp.message(response % real_user_dict if real_user_dict else "")
 
         success = True
 
@@ -185,7 +195,50 @@ def twilio_sms():
         response = sys.exc_info()[1].message
         raise
     finally:
-        log_message(tr_user_nk=tr_user_nk, message=message, response=response, success=success)
+        log_message(user_number=user_number, message=message, response=response, success=success)
+
+
+@app.route("/twilio_phone", methods=['GET', 'POST'])
+def twilio_phone():
+    resp = twilio.twiml.Response()
+    resp.say(Messages.CALL_INITIAL_PROMPT, voice="woman")
+    resp.record(maxLength=300, action="/twilio_phone_thanks")
+    return str(resp)
+
+@app.route("/twilio_phone_thanks", methods=['GET', 'POST'])
+def twilio_phone_complete():
+    message = request.values
+    response = None
+    success = False
+    user_model = UserModel()
+    content_model = ContentModel()
+    user_number = request.values.get("Called")
+
+    try:
+        body = request.values.get("Body", None)
+        body = body.strip() if body else None
+
+        recording_duration = int(request.values.get("RecordingDuration", 0))
+        recording_url = request.values.get("RecordingUrl", None)
+
+        content_dict = content_model.create_content()
+        content_dict["user_number"] = user_number
+        content_dict["content_type"] = ContentType.MORNING
+        content_dict["content_url"] = recording_url
+        content_model.insert_content(content_dict)
+
+        resp = twilio.twiml.Response()
+        resp.say(Messages.CALL_THANKS, voice="woman")
+
+        success = True
+
+        return str(resp)
+
+    except:
+        response = sys.exc_info()[1].message
+        raise
+    finally:
+        log_message(user_number=user_number, message=message, response=response, success=success)
 
 
 def parse_time(time_input):

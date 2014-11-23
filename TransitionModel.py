@@ -51,11 +51,11 @@ class UserModel(object):
                  params={"loved_number": loved_number})
         return [x["user_number"] for x in results]
 
-def log_message(tr_user_nk, message, response, success):
+def log_message(user_number, message, response, success):
     message_dict = TransitionWriter.create_row("tr_message")
     with TransitionWriter() as writer:
         message_dict["created"] = datetime.utcnow()
-        message_dict["tr_user_nk"] = tr_user_nk
+        message_dict["user_number"] = user_number
         message_dump = {}
         for (key, val) in message.iteritems():
             message_dump[key] = val
@@ -70,16 +70,26 @@ class ContentModel(object):
     def __init__(self):
         self.database_uri = Config.DATABASE_URI
 
-    def retrieve_content_url(self, tr_user_nk, content_type):
+    def retrieve_content_url(self, user_number, content_type):
         content = retrieve(self.database_uri,
                         """SELECT * FROM tr_content
-                           WHERE tr_user_nk = %(tr_user_nk)s
+                           WHERE user_number = %(user_number)s
                             AND content_type = %(content_type)s
                             ORDER BY tr_content_nk DESC
                             LIMIT 1""",
-                 params={"tr_user_nk": tr_user_nk, "content_type": content_type})
+                 params={"user_number": user_number, "content_type": content_type})
 
         return content["content_url"] if content else None
+
+    def get_warning_content_urls(self, user_number):
+        content = fetchall(self.database_uri,
+                        """SELECT content_url FROM tr_content
+                           WHERE user_number = %(user_number)s
+                            AND content_type in (%(my)s, %(loved)s)
+                            ORDER BY tr_content_nk DESC""",
+                 params={"user_number": user_number, "my": ContentType.MY_WARNING, "loved": ContentType.LOVED_WARNING})
+
+        return [x["content_url"] for x in content]
 
     def create_content(self):
         content_dict = TransitionWriter.create_row("tr_content")

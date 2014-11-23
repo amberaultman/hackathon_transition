@@ -30,7 +30,7 @@ class TransitionWriter(PGWriter):
             "primary_key": "tr_message_nk",
             "columns": [
                 ('tr_message_nk', 'bigserial'),
-                ('tr_user_nk', 'int8'),
+                ('user_number', 'text'),
                 ('message_json', 'json'),
                 ('response', 'text'),
                 ('success', 'bool'),
