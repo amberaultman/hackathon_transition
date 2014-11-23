@@ -1,12 +1,15 @@
 __author__ = 'Sean Paley'
-from flask import Flask, request, redirect, session
+from flask import Flask, request, redirect, session, flash, render_template
 import twilio.twiml, re
 from pprint import pprint
 from TransitionModel import *
 import sys
 from resources import *
+from lib.lib import *
+from TransitionJobs import *
 
 app = Flask(__name__)
+app.config.from_object(Config)
 
 @app.route("/", methods=['GET'])
 def default():
@@ -20,6 +23,7 @@ def twilio_sms():
     success = False
     user_model = UserModel()
     content_model = ContentModel()
+    user_number = request.values["From"]
 
     try:
         body = request.values.get("Body", None)
@@ -32,7 +36,6 @@ def twilio_sms():
             if url:
                 media_urls.append(url)
 
-        user_number = request.values["From"]
         user_dict = user_model.retrieve_user(user_number)
 
         status = user_dict["status"] if user_dict else None
@@ -41,15 +44,6 @@ def twilio_sms():
             #note this won't do anything because twilio captures it
             user_model.stop_number(user_number)
             response = Messages.STOP
-
-        elif body and body.lower().startswith("leave"):
-            dt = parse_time(body)
-            if dt:
-                response = Messages.HOME_CHANGED
-                user_dict["leave_time"] = dt
-                user_model.update_user(user_dict)
-            else:
-                response = Messages.BAD_TIME
 
         elif not status or status == Statuses.STOP:
             user_dict = user_model.create_user()
@@ -150,7 +144,16 @@ def twilio_sms():
 
             elif body:
                 body = body.lower()
-                response = Messages.HELP
+                if body.startswith("leave"):
+                    dt = parse_time(body)
+                    if dt:
+                        response = Messages.HOME_CHANGED
+                        user_dict["leave_time"] = dt
+                        user_model.update_user(user_dict)
+                    else:
+                        response = Messages.BAD_TIME
+                else:
+                    response = Messages.HELP
         elif status == Statuses.MEDIA:
             phn = parse_phone(body)
             if body and body.lower() == 'me':
@@ -182,7 +185,7 @@ def twilio_sms():
         real_user_dict = {}
         if user_dict:
             real_user_dict.update(user_dict)
-            real_user_dict["leave_time"] = real_user_dict.get("leave_time").strftime("%I:%M %p") if real_user_dict.get("leave_time") else None
+            real_user_dict["leave_time"] = format_leave_time(real_user_dict.get("leave_time"))
 
         resp = twilio.twiml.Response()
         resp.message(response % real_user_dict if real_user_dict else "")
@@ -221,6 +224,11 @@ def twilio_phone_complete():
         recording_duration = int(request.values.get("RecordingDuration", 0))
         recording_url = request.values.get("RecordingUrl", None)
 
+        if recording_url:
+            if not recording_url.endswith(".mp3"):
+                recording_url += ".mp3"
+            recording_url = recording_url.replace("http://", "https://")
+
         content_dict = content_model.create_content()
         content_dict["user_number"] = user_number
         content_dict["content_type"] = ContentType.MORNING
@@ -240,31 +248,52 @@ def twilio_phone_complete():
     finally:
         log_message(user_number=user_number, message=message, response=response, success=success)
 
+@app.route('/testjobs', methods=['GET', 'POST'])
+def testjobs():
+    error = None
+    user_number = ""
+    if request.method == 'POST':
+        job = request.form.get("job")
+        user_number = request.form.get("user_number", "").strip()
+        result = None
 
-def parse_time(time_input):
-    if not time_input:
-        return None
-    m = re.search("""(?P<hour>[0,1]?\d):?(?P<minute>\d{1,2})?\s*(?P<ampm>am|pm)?""", time_input, re.IGNORECASE)
-    if m:
-        hour = int(m.group("hour"))
-        minute = m.group("minute")
-        if not minute:
-            minute = 0
-        ampm = m.group("ampm")
-        ampm = ampm.lower() if ampm else "pm"
-        if ampm == "pm":
-            hour += 12
+        jobs = TransitionJobs()
 
-        return datetime(2000, 1, 1, hour, int(minute))
-    return None
+        if not session.get("logged_in", False):
+            if request.form.get("test_password") != Config.TEST_PASSWORD:
+                error = "Incorrect test password"
+            else:
+                session["logged_in"] = True
+        elif not user_number:
+            error = "User number not specified"
+        else:
+            valid = UserModel().is_valid_for_job(user_number)
+            if not valid[0]:
+                error = valid[1]
 
-def parse_phone(phone_input):
-    if not phone_input:
-        return None
-    m = re.search("""^\D*1?(\d{3})\D*(\d{3})\D*(\d{4})\D*$""", phone_input)
-    if m:
-        return "+1%s%s%s" % (m.group(1), m.group(2), m.group(3))
-    return None
+        if not job:
+            error = "No job specified"
+
+        if not error:
+            job_result = (False, "Unknown job")
+            if job == "morning":
+                job_result = jobs.send_morning_text(user_number)
+            elif job=="warning":
+                job_result = jobs.send_warning_text(user_number)
+            elif job=="drive":
+                job_result = jobs.make_drive_call(user_number)
+            elif job=="loved":
+                job_result = jobs.send_loved_prompt(user_number)
+
+            if job_result[0]:
+                result = job_result[1]
+            else:
+                error = job_result[1]
+
+        if result:
+            flash(result)
+    return render_template('testjobs.html', error=error)
+
 
 if __name__ == "__main__":
     app.run(debug=True)

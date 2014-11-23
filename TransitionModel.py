@@ -51,6 +51,16 @@ class UserModel(object):
                  params={"loved_number": loved_number})
         return [x["user_number"] for x in results]
 
+    def is_valid_for_job(self, user_number):
+        user_dict = self.retrieve_user(user_number)
+        if not user_dict:
+            return False, "User not found"
+
+        if user_dict["status"] != Statuses.COMPLETE:
+            return False, "User in incorrect status: %s" % user_dict["status"]
+
+        return True, None
+
 def log_message(user_number, message, response, success):
     message_dict = TransitionWriter.create_row("tr_message")
     with TransitionWriter() as writer:

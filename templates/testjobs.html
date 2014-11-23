@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% block body %}
+  {% if error %}<p class=error><strong>Error:</strong> {{ error }}{% endif %}
+  <form action="{{ url_for('testjobs') }}" method=post>
+    <dl>
+      <dt>Test Password:
+      <dd><input type=password name=test_password value="{{ session.get("logged_in", "") }}">
+      <dt>User Number:
+      <dd><input type=text name=user_number value="{{ request.form.get("user_number", "") }}">
+      <dt>Job:
+      <dd><select name=job>
+        <option value="">[Select]</option>
+        <option value="morning">Morning Text</option>
+        <option value="warning">Time To Leave Prompt</option>
+        <option value="drive">Drive Home Call</option>
+        <option value="loved">Prompt Love One</option>
+        </select>
+      <dt><input type=submit value=Test>
+    </dl>
+  </form>
+{% endblock %}

@@ -16,8 +16,8 @@ class Messages(object):
     MEDIA_LOVED_CONFIRM = "Your loved one's message is now set. Send another one at any time if you'd like to change it."
     MEDIA_NOT_LOVED = "Sorry, you are not set up as the loved one of that user. Please try again or enter 'skip' to cancel."
     MEDIA_SKIP = "OK, we'll skip that file."
-    HELP = "Kido help - send a photo or video to use as a home reminder for yourself or a loved one. Text 'STOP' to cancel the Kido service." \
-                + "You are currently set to leave at %(leave_time)s."
+    HELP = "Kido help - send a photo or video to use as a home reminder for yourself or a loved one. Text 'STOP' to cancel the Kido service. " \
+                + "You are currently set to leave at %(leave_time)s. If you'd like to change that, respond with 'leave <time>' where time is like '5:30 PM'."
     STOP = "You are no longer registered with kido. Good-bye!"
     SINGLE_LOVED_MESSAGE = "Hi there! Your loved one with phone number %(user_number)s has started using a service called Kido. " \
            + "Kido helps people transition from work to home by sending them messages when it's time to go home. " \
@@ -34,7 +34,7 @@ class Messages(object):
             + "Press any key when finished or hang up."
     CALL_THANKS = "Thank you and have a nice and meaningful night!"
 
-    MORNING_MESSAGE = "Good morning, %(user_name)s.  We hope you had a great evening.  If you left yourself a message for today, play it here %(content_url)s. " \
+    MORNING_MESSAGE = "Good morning, %(user_name)s.  We hope you had a great evening.  If you left yourself a message for today, play it above or below this text. " \
             + "You're currently expected to leave work at %(leave_time)s this evening.  If you'd like to change that, respond with 'leave <time>' where time is like '5:30 PM'."
 
     WARNING_MESSAGE = "Hi %(user_name)s.  We hope you had a great day!  It's time to pack up and head home.  Your loved ones miss you."
