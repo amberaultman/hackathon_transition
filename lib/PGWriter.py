@@ -159,7 +159,7 @@ class PGWriter(object):
         self.commit()
         self.logger.info("%s: loaded %s rows" % (table, rows))
 
-    def insert(self, table, insert_dict, columns=None, table_name=None, commit=False):
+    def insert(self, table, insert_dict, columns=None, table_name=None, commit=False, get_serial=False):
         sql_columns = ""
         sql_values = ""
 
@@ -173,13 +173,18 @@ class PGWriter(object):
                 sql_columns += (", " if sql_columns else "") + ('"%s"' % column)
                 sql_values += (", " if sql_values else "") + ("%%(%s)s" % column)
 
-        sql = "INSERT INTO %s (%s) VALUES (%s)" % (table_name if table_name else table, sql_columns, sql_values)
+        sql = "INSERT INTO %s (%s) VALUES (%s); %s" % (table_name if table_name else table, sql_columns, sql_values,
+                                                   "SELECT lastval()" if get_serial else "")
         #if sql.find("common_log") < 0:
         #    print sql
         self.logger.debug(sql)
         self.insert_cursor.execute(sql, insert_dict)
+        ret = None
+        if get_serial:
+            ret = self.insert_cursor.fetchone()[0]
         if commit:
             self.commit()
+        return ret
 
     def update(self, table, update_dict, id_column=None, columns=None):
         sql_set = ""
@@ -192,7 +197,7 @@ class PGWriter(object):
         if not columns: columns = table_dict["columns"]
 
         update_dict = self.convert_data_types(update_dict)
-        for column in columns:
+        for (column, column_type) in columns:
             v = update_dict.get(column)
             if v is not None and column != id_column:
                 sql_set += (", " if sql_set else "") + ("%s = %%(%s)s" % (column, column))
@@ -223,16 +228,17 @@ class PGWriter(object):
                 v[key] = 'Y' if value else 'N'
         return v
 
-    def execute(self, sql, name=None, values=None, commit=True):
+    def execute(self, sql, name=None, params=None, commit=True):
         if name:
             self.logger.info("%s: starting" % name)
         self.logger.debug(sql)
-        self.insert_cursor.execute(sql, values)
+        self.insert_cursor.execute(sql, params)
+        count = self.insert_cursor.rowcount
         if commit:
             self.commit()
         if name:
-            self.logger.debug("%s: updated %s rows" % (name, self.insert_cursor.rowcount))
-        return self.insert_cursor.rowcount
+            self.logger.debug("%s: updated %s rows" % (name, count))
+        return count
 
 
     def remove_duplicates(self, table, partition_by_columns, order_by_col, primary_key=None, exclude_partition_by=False):

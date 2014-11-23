@@ -10,7 +10,7 @@ setlocale(LC_NUMERIC, '')
 class Config(object):
     #DW connection
     deployment = os.getenv('TRANSITION_DEPLOYMENT', 'LOCAL')
-    print "TRANSITION_DEPLOYMENT: %s" % deployment
+    logging.getLogger().info("TRANSITION_DEPLOYMENT: %s" % deployment)
     LOCAL = deployment.lower() == "local"
     DATABASE_URI_LOCAL = "dbname=transition host=localhost user=python password=python"
     DATABASE_URI_SERVER = "dbname=igniteanalytics host=wsanalyticsdb.cmjbyzpmmqct.us-east-1.rds.amazonaws.com user= password="

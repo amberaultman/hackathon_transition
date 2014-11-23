@@ -32,6 +32,8 @@ class TransitionWriter(PGWriter):
                 ('tr_message_nk', 'bigserial'),
                 ('tr_user_nk', 'int8'),
                 ('message_json', 'json'),
+                ('response', 'text'),
+                ('success', 'bool'),
                 ('created', 'timestamp')
             ]
         },
@@ -40,8 +42,7 @@ class TransitionWriter(PGWriter):
             "primary_key": "tr_content_nk",
             "columns": [
                 ('tr_content_nk', 'bigserial'),
-                ('tr_user_nk', 'int8'),
-                ('tr_message_nk', 'int8'),
+                ('user_number', 'text'),
                 ('content_type', 'text'),
                 ('content_url', 'text'),
                 ('created', 'timestamp')
