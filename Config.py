@@ -13,7 +13,7 @@ class Config(object):
     logging.getLogger().info("TRANSITION_DEPLOYMENT: %s" % deployment)
     LOCAL = deployment.lower() == "local"
     DATABASE_URI_LOCAL = "dbname=transition host=localhost user=python password=python"
-    DATABASE_URI_SERVER = "dbname=igniteanalytics host=wsanalyticsdb.cmjbyzpmmqct.us-east-1.rds.amazonaws.com user= password="
+    DATABASE_URI_SERVER = "postgres://gqhejsmyivbhox:rblfio9K3UveAACq1uucP6CMVb@ec2-54-197-249-212.compute-1.amazonaws.com:5432/ddo2h0see3cur3"
     DATABASE_URI = DATABASE_URI_LOCAL if LOCAL else DATABASE_URI_SERVER
     DEBUG = True if LOCAL else False
     SECRET_KEY = '\xec\xdd\xcb\xf0\x8c\xd8\xc8\x14\xb2\xff@\x0c\xd8\x84\x9db\x84\x05=A\x81 \x96\xaf'
