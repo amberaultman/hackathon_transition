@@ -1,0 +1,1 @@
+web: gunicorn Transition:app --log-file=-

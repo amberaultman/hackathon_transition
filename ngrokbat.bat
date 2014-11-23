@@ -1,0 +1,1 @@
+ngrok -authtoken thy+5jVxslF23sJ1h55P -subdomain "ignitetransitiondev" 5000
