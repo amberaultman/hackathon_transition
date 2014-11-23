@@ -6,4 +6,4 @@ httplib2==0.9
 itsdangerous==0.24
 six==1.8.0
 twilio==3.6.11
-pscyopg2==2.5.4
+pscyopg2==2.5.1
